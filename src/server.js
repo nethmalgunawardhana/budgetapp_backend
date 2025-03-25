@@ -1,0 +1,31 @@
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+
+const { PORT, NODE_ENV } = require('./config/env');
+const { errorHandler, notFoundHandler } = require('./middleware/error.middleware');
+
+// Routes
+const authRoutes = require('./routes/auth.routes');
+
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(helmet());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Routes
+app.use('/api/auth', authRoutes);
+
+// 404 Handler
+app.use(notFoundHandler);
+
+// Error Handler
+app.use(errorHandler);
+
+// Start Server
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
