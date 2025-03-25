@@ -4,7 +4,7 @@ const { JWT_SECRET } = require('../config/env');
 class JwtService {
   generateToken(payload, options = {}) {
     const defaultOptions = {
-      expiresIn: '1h'
+      expiresIn: '12h'
     };
 
     const mergedOptions = { ...defaultOptions, ...options };
