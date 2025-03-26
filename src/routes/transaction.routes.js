@@ -1,15 +1,18 @@
 const express = require('express');
 const router = express.Router();
-const TransactionController = require('../controllers/transaction.controller');
-const {authenticateToken} = require('../middleware/auth.middleware');
+const transactionController = require('../controllers/transaction.controller');
+const { authenticateUser } = require('../middleware/auth.middleware');
 
-// Add transaction route
-router.post('/add', authenticateToken, TransactionController.addTransaction);
+// Apply authentication middleware to all routes
+router.use(authenticateUser);
 
-// Get transactions route
-router.get('/list', authenticateToken, TransactionController.getTransactions);
+// Transaction routes
+router.post('/add', transactionController.addTransaction);
+router.get('/list', transactionController.getTransactions);
+router.get('/summary', transactionController.getTransactionSummary);
 
-// Get transaction summary route
-router.get('/summary', authenticateToken, TransactionController.getTransactionSummary);
+// Category routes
+router.post('/categories/add', transactionController.addCategory);
+router.get('/categories', transactionController.getCategories);
 
 module.exports = router;

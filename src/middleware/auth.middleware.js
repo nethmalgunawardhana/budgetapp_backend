@@ -1,49 +1,64 @@
 const jwt = require('jsonwebtoken');
-const { JWT_SECRET } = require('../config/env');
 
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ 
-      error: 'Authentication required',
-      message: 'No token provided' 
-    });
-  }
-
+exports.authenticateUser = async (req, res, next) => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    if (error.name === 'TokenExpiredError') {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ 
-        error: 'Token expired',
-        message: 'Your session has expired. Please log in again.' 
+        success: false, 
+        message: 'Access denied: No token provided' 
       });
     }
-    return res.status(403).json({ 
-      error: 'Invalid token',
-      message: 'Unable to authenticate the token' 
+    
+    const token = authHeader.split(' ')[1];
+    
+    try {
+      // Verify the token using your secret key
+      const SECRET_KEY = process.env.JWT_SECRET || 'your_secret_key';
+      const decodedToken = jwt.verify(token, SECRET_KEY);
+      
+      // Log the decoded user ID
+      console.log('Decoded User ID:', decodedToken.userId);
+      
+      // Attach user information to the request
+      req.user = {
+        id: decodedToken.userId,
+        email: decodedToken.email
+      };
+      
+      next();
+    } catch (tokenError) {
+      console.error('Token verification error:', tokenError);
+      
+      // Handle different types of token errors
+      if (tokenError.name === 'JsonWebTokenError') {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token format',
+          error: tokenError.message
+        });
+      }
+      
+      if (tokenError.name === 'TokenExpiredError') {
+        return res.status(401).json({
+          success: false,
+          message: 'Token has expired',
+          error: tokenError.message
+        });
+      }
+      
+      res.status(401).json({ 
+        success: false, 
+        message: 'Authentication failed',
+        error: tokenError.message
+      });
+    }
+  } catch (error) {
+    console.error('Authentication error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error during authentication' 
     });
   }
-};
-
-// Optional role-based authorization middleware
-const authorizeRoles = (...allowedRoles) => {
-  return (req, res, next) => {
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({ 
-        error: 'Forbidden',
-        message: 'You do not have permission to access this resource' 
-      });
-    }
-    next();
-  };
-};
-
-module.exports = {
-  authenticateToken,
-  authorizeRoles
 };

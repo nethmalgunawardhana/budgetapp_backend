@@ -1,4 +1,4 @@
-// src/config/firebase.js
+
 const admin = require('firebase-admin');
 const { getFirestore } = require('firebase-admin/firestore');
 
