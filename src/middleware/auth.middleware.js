@@ -22,11 +22,24 @@ exports.authenticateUser = async (req, res, next) => {
       console.log('Decoded User ID:', decodedToken.userId);
       
       // Attach user information to the request
+      if (decoded.userId) {
       req.user = {
         id: decodedToken.userId,
-        email: decodedToken.email
+        email: decodedToken.email,
+        name: decodedToken.name,
+        role: decodedToken.role || "user" 
       };
-      
+    }else if (decoded.providerId) {
+      req.serviceProvider = {
+        id: decoded.providerId,
+        email: decoded.email,
+        businessName: decoded.businessName,
+        serviceType: decoded.serviceType,
+        role: 'service_provider'
+      };
+    } else {
+      return res.status(401).json({ message: 'Invalid token payload' });
+    }
       next();
     } catch (tokenError) {
       console.error('Token verification error:', tokenError);
