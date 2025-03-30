@@ -9,6 +9,7 @@ const { errorHandler, notFoundHandler } = require('./middleware/error.middleware
 const authRoutes = require('./routes/auth.routes');
 const servicePostRoutes = require('./routes/servicePost.routes');
 const transactionRoutes = require('./routes/transaction.routes');
+
 const app = express();
 
 // Middleware

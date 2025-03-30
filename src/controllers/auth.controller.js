@@ -229,6 +229,7 @@ class AuthController {
         status: 'approved' // Requires approval
       });
       const accessToken = JwtService.generateToken({
+        name: newProvider.ownerName,
         providerId: newProvider.id,
         email: newProvider.email,
         businessName: newProvider.businessName,
@@ -243,6 +244,7 @@ class AuthController {
       res.status(201).json({
         message: 'Service provider registered successfully and pending approval',
         serviceProvider: {
+          name: newProvider.ownerName,
           id: newProvider.id,
           businessName: newProvider.businessName,
           email: newProvider.email,
@@ -295,6 +297,7 @@ class AuthController {
   
       // Generate tokens
       const accessToken = JwtService.generateToken({
+        name: provider.ownerName,
         providerId: provider.id,
         email: provider.email,
         businessName: provider.businessName,
@@ -309,6 +312,7 @@ class AuthController {
       res.json({
         message: 'Login successful',
         serviceProvider: {
+          name: provider.ownerName,
           id: provider.id,
           businessName: provider.businessName,
           email: provider.email,
@@ -346,6 +350,7 @@ class AuthController {
   
       // Generate new access token
       const newAccessToken = JwtService.generateToken({
+        name: provider.ownerName,
         providerId: provider.id,
         email: provider.email,
         businessName: provider.businessName,

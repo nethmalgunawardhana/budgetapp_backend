@@ -13,6 +13,7 @@ const router = express.Router();
 router.use(authenticateUser);
 router.route('/').post(createServicePost);
 router.route('/provider').get(getServicePosts);
+router.route('/all').get(getServicePosts);
 router
   .route('/:id')
   .get(getServicePost)

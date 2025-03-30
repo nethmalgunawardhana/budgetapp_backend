@@ -25,6 +25,23 @@ exports.getServicePosts = asyncHandler(async (req, res) => {
       data: servicePosts,
     });
   });
+  //get all service posts
+exports .getServicePosts = asyncHandler(async (req, res) => {
+  const snapshot = await firestore.collection('servicePosts')
+    .get();  // Add this line
+ const servicePosts = [];
+  snapshot.forEach(doc => {
+    servicePosts.push({
+      id: doc.id,
+      ...doc.data()
+    });
+  });
+  res.status(200).json({
+    success: true,
+    data: servicePosts,
+  });
+});
+
 
 // @desc    Get single service post
 // @route   GET /api/service-posts/:id

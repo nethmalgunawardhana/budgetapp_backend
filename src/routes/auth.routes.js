@@ -12,7 +12,7 @@ router.post('/google-signin', AuthController.googleSignIn);
 
 // Service provider routes
 router.post('/service-provider/register', AuthController.serviceProviderRegister);
-router.post('/service-provider/login',authenticateUser, AuthController.serviceProviderLogin);
+router.post('/service-provider/login',AuthController.serviceProviderLogin);
 router.post('/service-provider/refresh-token', AuthController.serviceProviderRefreshToken);
 
 
