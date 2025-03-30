@@ -31,7 +31,7 @@ class AuthController {
       const accessToken = JwtService.generateToken({
         userId: newUser.id,
         email: newUser.email,
-        name: newUser.name,  // Added name to the token payload
+        name: newUser.name,  
         role: newUser.role
       });
 
@@ -226,7 +226,18 @@ class AuthController {
         phone,
         password,
         serviceType,
-        status: 'pending' // Requires approval
+        status: 'approved' // Requires approval
+      });
+      const accessToken = JwtService.generateToken({
+        providerId: newProvider.id,
+        email: newProvider.email,
+        businessName: newProvider.businessName,
+        serviceType: newProvider.serviceType,
+        role: 'serviceprovider'
+      });
+      
+      const refreshToken = JwtService.generateRefreshToken({
+        providerId: newProvider.id
       });
   
       res.status(201).json({
@@ -236,6 +247,10 @@ class AuthController {
           businessName: newProvider.businessName,
           email: newProvider.email,
           status: newProvider.status
+        },
+        tokens: {
+          accessToken,
+          refreshToken
         }
       });
     } catch (error) {
@@ -284,7 +299,7 @@ class AuthController {
         email: provider.email,
         businessName: provider.businessName,
         serviceType: provider.serviceType,
-        role: 'service_provider'
+        role: 'serviceprovider'
       });
   
       const refreshToken = JwtService.generateRefreshToken({

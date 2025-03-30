@@ -7,6 +7,7 @@ const { errorHandler, notFoundHandler } = require('./middleware/error.middleware
 
 // Routes
 const authRoutes = require('./routes/auth.routes');
+const servicePostRoutes = require('./routes/servicePost.routes');
 const transactionRoutes = require('./routes/transaction.routes');
 const app = express();
 
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/service-posts', servicePostRoutes);
 
 // 404 Handler
 app.use(notFoundHandler);
