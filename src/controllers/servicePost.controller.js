@@ -79,10 +79,10 @@ exports.getServicePost = asyncHandler(async (req, res) => {
 // @route   POST /api/service-posts
 // @access  Private
 exports.createServicePost = asyncHandler(async (req, res) => {
-  const { title, description, price, category, location } = req.body;
+  const { title, description, price, category, location,contactno } = req.body;
 
   // Validate required fields
-  if (!title || !description || !price || !category || !location) {
+  if (!title || !description || !price || !category || !location || !contactno) {
     return res.status(400).json({
       success: false,
       error: 'Please provide all required fields',
@@ -98,6 +98,7 @@ exports.createServicePost = asyncHandler(async (req, res) => {
     price: Number(price),
     category,
     location,
+    contactno,
     provider: req.serviceProvider.id,
     status: 'active',
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
