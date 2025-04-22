@@ -8,6 +8,7 @@ const { firestore } = require('../config/firebase');
 async function getTransactionGraph(req, res) {
     try {
         const userId = req.user.id || req.user.uid;
+        console.log('User ID:', userId);
         const { period = 'daily', startDate, endDate } = req.query;
         
         if (!startDate || !endDate) {
@@ -25,9 +26,17 @@ async function getTransactionGraph(req, res) {
             });
         }
         
-        // Convert string dates to Date objects
+        // Convert string dates to Date objects and adjust the end date to include the entire day
         const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0); // Set to beginning of the start day
+        
         const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999); // Set to end of the end day
+        
+        console.log('Adjusted Date Range Query:', {
+            startDate: start.toISOString(),
+            endDate: end.toISOString()
+        });
         
         // Fetch all transactions within date range
         const snapshot = await firestore.collection('transactions')
@@ -36,6 +45,8 @@ async function getTransactionGraph(req, res) {
             .where('createdAt', '<=', end)
             .get();
             
+        console.log('Transactions in date range:', snapshot.size);
+        
         // Process data based on selected period
         const { dates, incomeData, expenseData, totalIncome, totalExpenses } = processTransactionData(
             snapshot.docs.map(doc => ({
@@ -46,6 +57,15 @@ async function getTransactionGraph(req, res) {
             start,
             end
         );
+        
+        console.log('Transaction data processed successfully:', {
+            period,
+            dates,
+            incomeData,
+            expenseData,
+            totalIncome,
+            totalExpenses
+        });
         
         res.json({
             success: true,
@@ -84,18 +104,36 @@ function processTransactionData(transactions, period, startDate, endDate) {
     
     // Process each transaction
     transactions.forEach(transaction => {
-        const transactionDate = transaction.createdAt.toDate();
+        // Handle different timestamp formats
+        let transactionDate;
+        if (transaction.createdAt && typeof transaction.createdAt.toDate === 'function') {
+            // Handle Firestore Timestamp objects
+            transactionDate = transaction.createdAt.toDate();
+        } else if (transaction.createdAt && transaction.createdAt._seconds) {
+            // Handle serialized Firestore Timestamp objects
+            transactionDate = new Date(transaction.createdAt._seconds * 1000);
+        } else if (transaction.createdAt instanceof Date) {
+            // Handle Date objects
+            transactionDate = transaction.createdAt;
+        } else if (transaction.createdAt) {
+            // Handle string or timestamp values
+            transactionDate = new Date(transaction.createdAt);
+        } else {
+            console.warn('Transaction missing valid createdAt property:', transaction);
+            return; // Skip this transaction
+        }
+        
         const dateKey = formatDateByPeriod(transactionDate, period);
         
         if (dateMap.has(dateKey)) {
             const currentData = dateMap.get(dateKey);
             
             if (transaction.type === 'INCOME') {
-                currentData.income += transaction.amount;
-                totalIncome += transaction.amount;
+                currentData.income += parseFloat(transaction.amount) || 0;
+                totalIncome += parseFloat(transaction.amount) || 0;
             } else if (transaction.type === 'EXPENSE') {
-                currentData.expense += transaction.amount;
-                totalExpenses += transaction.amount;
+                currentData.expense += parseFloat(transaction.amount) || 0;
+                totalExpenses += parseFloat(transaction.amount) || 0;
             }
             
             dateMap.set(dateKey, currentData);

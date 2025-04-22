@@ -421,7 +421,277 @@ Date.prototype.getMonthValueForLocaleMonth = function(monthName) {
     return months.indexOf(monthName);
 };
 
+
+// Get transactions and show daily spending
+async function getDailyTransactions(req, res) {
+    try {
+        const userId = req.user.id || req.user.uid;
+        console.log('Fetching transactions for user:', userId);
+
+        // Get today's date in the user's timezone
+        const today = new Date();
+        const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+        
+        console.log('Filtering for date range:', { startOfToday, endOfToday });
+
+        // Query all transactions (don't filter by date in the query)
+        const snapshot = await firestore.collection('transactions')
+            .where('userId', '==', userId)
+            .where('type', '==', 'EXPENSE')
+            .get();
+            
+        console.log('Found transactions:', snapshot.size);
+
+        // Process and filter transactions client-side
+        const transactions = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            
+            // Handle different date formats
+            let transactionDate;
+            if (data.createdAt && typeof data.createdAt.toDate === 'function') {
+                // Firestore timestamp
+                transactionDate = data.createdAt.toDate();
+            } else if (data.createdAt && typeof data.createdAt === 'string') {
+                // String date format
+                transactionDate = new Date(data.createdAt);
+            } else {
+                // Fallback
+                transactionDate = new Date(0);
+            }
+            
+            const transaction = {
+                id: doc.id,
+                ...data,
+                createdAt: transactionDate
+            };
+            
+            transactions.push(transaction);
+        });
+
+        // Filter for today's transactions client-side
+        const todaysTransactions = transactions.filter(transaction => {
+            const date = transaction.createdAt;
+            return date >= startOfToday && date <= endOfToday;
+        });
+
+        console.log('Today\'s transactions:', todaysTransactions.length);
+
+        // Organize transactions by day
+        const dailySpending = {};
+        todaysTransactions.forEach(transaction => {
+            const dateKey = transaction.createdAt.toISOString().split('T')[0];
+            
+            if (!dailySpending[dateKey]) {
+                dailySpending[dateKey] = {
+                    date: dateKey,
+                    totalAmount: 0,
+                    transactions: []
+                };
+            }
+            
+            dailySpending[dateKey].totalAmount += parseFloat(transaction.amount || 0);
+            dailySpending[dateKey].transactions.push({
+                ...transaction,
+                createdAt: transaction.createdAt.toISOString()
+            });
+        });
+
+        // Convert to array and sort by date
+        const dailySpendingArray = Object.values(dailySpending)
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // Add overall statistics
+        const totalSpending = todaysTransactions.reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+
+        res.json({
+            success: true,
+            data: {
+                dailySpending: dailySpendingArray,
+                statistics: {
+                    totalTransactions: todaysTransactions.length,
+                    totalSpending,
+                    dateRange: {
+                        from: startOfToday.toISOString(),
+                        to: endOfToday.toISOString()
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching transactions:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error while fetching transactions',
+            errorDetails: error.message
+        });
+    }
+}
+// Get transactions grouped by category
+async function getCategoryTransactions(req, res) {
+    try {
+        const userId = req.user.id || req.user.uid;
+        console.log('Fetching category transactions for user:', userId);
+
+        // Optional date range filtering
+        const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
+        const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
+        
+        // Build query
+        let query = firestore.collection('transactions')
+            .where('userId', '==', userId)
+            .where('type', '==', 'EXPENSE');
+            
+        // Add date filters if specified
+        if (startDate) {
+            query = query.where('createdAt', '>=', startDate);
+        }
+        if (endDate) {
+            // Add one day to include the end date fully
+            const nextDay = new Date(endDate);
+            nextDay.setDate(nextDay.getDate() + 1);
+            query = query.where('createdAt', '<', nextDay);
+        }
+            
+        // Execute query
+        const snapshot = await query.get();
+        console.log('Found transactions:', snapshot.size);
+
+        // Process transaction data
+        const transactions = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const transaction = {
+                id: doc.id,
+                ...data
+            };
+            
+            // Convert timestamps to dates
+            if (transaction.createdAt && typeof transaction.createdAt.toDate === 'function') {
+                transaction.createdAt = transaction.createdAt.toDate().toISOString();
+            }
+            
+            transactions.push(transaction);
+        });
+
+        // Organize transactions by category
+        const categorySpending = {};
+        transactions.forEach(transaction => {
+            const category = transaction.category || 'Uncategorized';
+            
+            if (!categorySpending[category]) {
+                categorySpending[category] = {
+                    category,
+                    totalAmount: 0,
+                    transactionCount: 0,
+                    transactions: []
+                };
+            }
+            
+            categorySpending[category].totalAmount += parseFloat(transaction.amount || 0);
+            categorySpending[category].transactionCount += 1;
+            categorySpending[category].transactions.push(transaction);
+        });
+
+        // Convert to array and sort by total amount (highest first)
+        const categorySpendingArray = Object.values(categorySpending)
+            .sort((a, b) => b.totalAmount - a.totalAmount);
+
+        res.json({
+            success: true,
+            data: {
+                categorySpending: categorySpendingArray,
+                totalCategories: categorySpendingArray.length,
+                totalTransactions: transactions.length,
+                totalSpending: transactions.reduce((sum, t) => sum + parseFloat(t.amount || 0), 0)
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching category transactions:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error while fetching category transactions',
+            errorDetails: error.message
+        });
+    }
+}
+
+// Create a new transaction
+async function createTransaction(req, res) {
+    try {
+        const userId = req.user.id || req.user.uid;
+        const { amount, category, description, type, paymentMethod } = req.body;
+
+        console.log('Creating transaction:', { userId, amount, category, type });
+
+        // Validate required fields
+        if (amount === undefined || !category || !type) {
+            return res.status(400).json({
+                success: false,
+                message: 'Amount, category, and type are required fields'
+            });
+        }
+
+        // Validate amount
+        const numericAmount = parseFloat(amount);
+        if (isNaN(numericAmount) || numericAmount <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Amount must be a positive number'
+            });
+        }
+
+        // Validate type
+        if (!['EXPENSE', 'INCOME'].includes(type)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Type must be either EXPENSE or INCOME'
+            });
+        }
+
+        // Create transaction record
+        const transaction = {
+            userId,
+            amount: numericAmount,
+            category,
+            description: description || '',
+            type,
+            paymentMethod: paymentMethod || 'Other',
+            createdAt: new Date()
+        };
+
+        // Add to Firestore
+        const docRef = await firestore.collection('transactions').add(transaction);
+        console.log('Created transaction with ID:', docRef.id);
+
+        // Convert date objects for consistent API response
+        const responseData = {
+            id: docRef.id,
+            ...transaction,
+            createdAt: transaction.createdAt.toISOString()
+        };
+
+        res.status(201).json({
+            success: true,
+            data: responseData
+        });
+    } catch (error) {
+        console.error('Error creating transaction:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error while creating transaction',
+            errorDetails: error.message
+        });
+    }
+}
+
+// Export all functions
 module.exports = {
+    getDailyTransactions,
+    getCategoryTransactions,
+    createTransaction,
+    // Include the existing functions from the savings plans controller
     getCurrentSavingsPlan,
     createSavingsPlan,
     updateSavingsPlan,
