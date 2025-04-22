@@ -79,7 +79,7 @@ exports.getServicePost = asyncHandler(async (req, res) => {
 // @route   POST /api/service-posts
 // @access  Private
 exports.createServicePost = asyncHandler(async (req, res) => {
-  const { title, description, price, category, location,contactno } = req.body;
+  const { title, description, price, category, location,contactno,username } = req.body;
 
   // Validate required fields
   if (!title || !description || !price || !category || !location || !contactno) {
@@ -94,6 +94,7 @@ exports.createServicePost = asyncHandler(async (req, res) => {
   
   const servicePost = {
     title,
+    username,
     description,
     price: Number(price),
     category,

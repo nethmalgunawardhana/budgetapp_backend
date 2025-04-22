@@ -10,6 +10,7 @@ const authRoutes = require('./routes/auth.routes');
 const servicePostRoutes = require('./routes/servicePost.routes');
 const transactionRoutes = require('./routes/transaction.routes');
 const userRoutes = require('./routes/user.routes');
+const savingsRoutes = require('./routes/savings.routes');
 
 const app = express();
 
@@ -24,7 +25,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/service-posts', servicePostRoutes);
 app.use('/api/user', userRoutes);
-
+app.use('/api/savings', savingsRoutes);
 
 // 404 Handler
 app.use(notFoundHandler);
