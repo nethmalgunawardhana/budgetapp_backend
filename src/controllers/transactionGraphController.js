@@ -84,30 +84,27 @@ function processTransactionData(transactions, period, startDate, endDate) {
     
     // Process each transaction
     transactions.forEach(transaction => {
-        const transactionDate = transaction.createdAt.toDate ? transaction.createdAt.toDate() : new Date(transaction.createdAt);
+        const transactionDate = transaction.createdAt.toDate();
         const dateKey = formatDateByPeriod(transactionDate, period);
         
-        // Make sure the date key exists in our map
-        if (!dateMap.has(dateKey)) {
-            dateMap.set(dateKey, { income: 0, expense: 0 });
+        if (dateMap.has(dateKey)) {
+            const currentData = dateMap.get(dateKey);
+            
+            if (transaction.type === 'INCOME') {
+                currentData.income += transaction.amount;
+                totalIncome += transaction.amount;
+            } else if (transaction.type === 'EXPENSE') {
+                currentData.expense += transaction.amount;
+                totalExpenses += transaction.amount;
+            }
+            
+            dateMap.set(dateKey, currentData);
         }
-        
-        const currentData = dateMap.get(dateKey);
-        
-        if (transaction.type === 'INCOME') {
-            currentData.income += parseFloat(transaction.amount);
-            totalIncome += parseFloat(transaction.amount);
-        } else if (transaction.type === 'EXPENSE') {
-            currentData.expense += parseFloat(transaction.amount);
-            totalExpenses += parseFloat(transaction.amount);
-        }
-        
-        dateMap.set(dateKey, currentData);
     });
     
     // Prepare data arrays for the chart
-    const incomeData = dates.map(date => dateMap.get(date)?.income || 0);
-    const expenseData = dates.map(date => dateMap.get(date)?.expense || 0);
+    const incomeData = dates.map(date => dateMap.get(date).income);
+    const expenseData = dates.map(date => dateMap.get(date).expense);
     
     return {
         dates,
@@ -126,19 +123,19 @@ function generateDateLabels(period, startDate, endDate) {
     const currentDate = new Date(startDate);
     
     while (currentDate <= endDate) {
-        labels.push(formatDateByPeriod(new Date(currentDate), period));
+        labels.push(formatDateByPeriod(currentDate, period));
         
         // Increment based on period
         if (period === 'daily') {
             currentDate.setDate(currentDate.getDate() + 1);
         } else if (period === 'monthly') {
-            currentDate.setMonth(currentDate.getMonth() + 1);
+            currentDate.setDate(currentDate.getDate() + 1);
         } else if (period === 'yearly') {
-            currentDate.setFullYear(currentDate.getFullYear() + 1);
+            currentDate.setMonth(currentDate.getMonth() + 1);
         }
     }
     
-    return [...new Set(labels)]; // Remove any potential duplicates
+    return labels;
 }
 
 /**
@@ -150,14 +147,14 @@ function formatDateByPeriod(date, period) {
     const day = String(date.getDate()).padStart(2, '0');
     
     if (period === 'daily') {
-        return `${day}/${month}/${year}`;
+        return `${day}/${month}`;
     } else if (period === 'monthly') {
-        return `${month}/${year}`;
+        return `${day}/${month}`;
     } else if (period === 'yearly') {
-        return `${year}`;
+        return `${month}/${year}`;
     }
     
-    return `${day}/${month}/${year}`;
+    return `${day}/${month}`;
 }
 
 module.exports = {
