@@ -11,6 +11,7 @@
   "description": "",
   "dependencies": {
     "axios": "^1.8.4",
+    "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
     "budgetapp_backend": "file:",
     "cors": "^2.8.5",
@@ -19,6 +20,7 @@
     "firebase-admin": "^11.11.0",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
+    "uuid": "^11.1.0",
     "validator": "^13.11.0"
   },
   "devDependencies": {
