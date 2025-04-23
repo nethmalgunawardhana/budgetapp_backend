@@ -1,12 +1,5 @@
 const express = require('express');
-const { 
-    getCurrentSavingsPlan, 
-    createSavingsPlan, 
-    updateSavingsPlan, 
-    deleteSavingsPlan, 
-    getSavingsPlanHistory, 
-    recordExpense 
-} = require('../controllers/savingsplan.controller');
+const savingsController = require('../controllers/savingsplan.controller');
 const { authenticateUser } = require('../middleware/auth.middleware');
 
 const router = express.Router();
@@ -14,22 +7,17 @@ const router = express.Router();
 // Apply authentication middleware to all routes
 router.use(authenticateUser);
 
-// Get current savings plan
-router.get('/current', getCurrentSavingsPlan);
+// Savings plan routes
+router.get('/current', savingsController.getCurrentSavingsPlan);
+router.get('/history', savingsController.getSavingsPlanHistory);
+router.post('/', savingsController.createSavingsPlan);
+router.put('/:id', savingsController.updateSavingsPlan);
+router.delete('/:id', savingsController.deleteSavingsPlan);
+router.post('/expense', savingsController.recordExpense);
 
-// Get savings plan history
-router.get('/history', getSavingsPlanHistory);
-
-// Create a new savings plan
-router.post('/', createSavingsPlan);
-
-// Update a savings plan
-router.put('/:id', updateSavingsPlan);
-
-// Delete a savings plan
-router.delete('/:id', deleteSavingsPlan);
-
-// Record an expense
-router.post('/expense', recordExpense);
+// Transaction routes
+router.post('/transactions', savingsController.createTransaction);
+router.get('/transactions/daily', savingsController.getDailyTransactions);
+router.get('/transactions/category', savingsController.getCategoryTransactions);
 
 module.exports = router;
